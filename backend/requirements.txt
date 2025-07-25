@@ -1,0 +1,28 @@
+# Requirements بر اساس settings.py موجود
+
+# Django Core
+Django==4.2.7
+
+# Django REST Framework
+djangorestframework==3.14.0
+
+# CORS Headers
+django-cors-headers==4.3.1
+
+# Python Telegram Bot
+python-telegram-bot==20.7
+
+# Requests
+requests==2.31.0
+
+# PostgreSQL adapter
+psycopg2-binary==2.9.9
+
+# Production server
+gunicorn==21.2.0
+
+# Static files serving
+whitenoise==6.6.0
+
+# Django Extensions (از INSTALLED_APPS)
+django-extensions==3.2.3
