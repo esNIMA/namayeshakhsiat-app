@@ -13,6 +13,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Django Backend (API on port 8000)
   backend:
@@ -20,8 +25,10 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"   # API Backend
+    env_file:
+      - .env  # این همه environment variables از .env رو می‌خونه
     environment:
-      - DEBUG=False
+      - DEBUG=${DEBUG:-False}
       - POSTGRES_HOST=db
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -29,10 +36,18 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - SECRET_KEY=${SECRET_KEY}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DISABLE_SSL_REDIRECT=${DISABLE_SSL_REDIRECT:-True}  # اضافه شد
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # React Frontend (Main site on port 80)
   frontend:
@@ -44,6 +59,8 @@ services:
     environment:
       - NODE_ENV=production
       - REACT_APP_API_URL=http://namayeshakhsiat.xyz:8000
+    depends_on:
+      - backend
     networks:
       - app-network
 
