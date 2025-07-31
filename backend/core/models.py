@@ -1,24 +1,18 @@
 from django.db import models
-
-# Create your models here.
-## CharacterSurvey core model
-from django.db import models
 from django.contrib.auth.models import User
+
 
 class TelegramUser(models.Model):
     telegram_id = models.BigIntegerField(unique=True)
-    first_name = models.CharField(max_length=100, blank=True)
-    is_member = models.BooleanField(default=False)
-    progress = models.JSONField(default=dict)
+    username = models.CharField(max_length=100, null=True, blank=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100, null=True, blank=True)
+    is_verified = models.BooleanField(default=False)  # اضافه شده
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Telegram User"
-        verbose_name_plural = "Telegram Users"
+    updated_at = models.DateTimeField(auto_now=True)  # اضافه شده
 
     def __str__(self):
-        return f"{self.first_name} ({self.telegram_id})"
+        return f"{self.first_name} (@{self.username}) - {'✅' if self.is_verified else '❌'}"
 
 class Channel(models.Model):
     channel_id = models.BigIntegerField(unique=True)
