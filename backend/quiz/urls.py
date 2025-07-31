@@ -2,6 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('webhook/', views.webhook, name='webhook'),
-    path('checkmembership/', views.check_membership, name='check_channel_membership'),
+    # API endpoints
+    path('api/verify-membership/', views.verify_membership, name='verify_membership'),
+
+    # Telegram webhook (اختیاری)
+    path('webhook/telegram/', views.telegram_webhook, name='telegram_webhook'),
 ]
