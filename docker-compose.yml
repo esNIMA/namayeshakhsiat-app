@@ -26,7 +26,7 @@ services:
     ports:
       - "8000:8000"   # API Backend
     env_file:
-      - .env  # این همه environment variables از .env رو می‌خونه
+      - .env
     environment:
       - DEBUG=${DEBUG:-False}
       - POSTGRES_HOST=db
@@ -36,7 +36,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - SECRET_KEY=${SECRET_KEY}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - DISABLE_SSL_REDIRECT=${DISABLE_SSL_REDIRECT:-True}  # اضافه شد
+      - DISABLE_SSL_REDIRECT=${DISABLE_SSL_REDIRECT:-True}
     depends_on:
       db:
         condition: service_healthy
@@ -49,16 +49,15 @@ services:
       retries: 3
       start_period: 40s
 
-  # React Frontend (Main site on port 80)
+  # React Frontend (Internal only - no external ports)
   frontend:
     build: ./frontend
     restart: unless-stopped
     ports:
-      - "80:3000"     # Main site
-      - "443:3000"    # HTTPS (after SSL)
+      - "3000:3000"     # تغییر: فقط پورت داخلی
     environment:
       - NODE_ENV=production
-      - REACT_APP_API_URL=http://namayeshakhsiat.xyz:8000
+      - REACT_APP_API_URL=https://namayeshakhsiat.xyz/api  # تغییر: HTTPS و /api
     depends_on:
       - backend
     networks:
