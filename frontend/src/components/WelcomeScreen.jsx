@@ -46,7 +46,7 @@ export default function WelcomeScreen({ onContinue }) {
     setError("");
 
     try {
-      const response = await axios.post("/api/verify-membership/", {
+      const response = await axios.post("/verify-membership/", {
         telegram_id: telegramUser.id,
         username: telegramUser.username || '',
         first_name: telegramUser.first_name || '',
