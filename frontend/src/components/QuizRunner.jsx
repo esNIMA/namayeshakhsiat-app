@@ -5,24 +5,30 @@ const SECTION_COLORS = [
   "bg-cyan-50", "bg-sky-50", "bg-indigo-50", "bg-fuchsia-50", "bg-pink-50"
 ];
 
-const PLACEHOLDER_TELEGRAM_ID = 123456789;
-
-export default function QuizRunner() {
+export default function QuizRunner({ userData }) {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(() => {
-    const saved = localStorage.getItem("quiz_progress");
-    return saved ? JSON.parse(saved) : {};
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("quiz_progress");
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
   });
   const [score, setScore] = useState(5);
   const [description, setDescription] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // استفاده از User Data واقعی
+  const telegramId = userData?.id || 136758283;
+  const firstName = userData?.first_name || "کاربر";
+  const username = userData?.username || "";
+
   useEffect(() => {
     async function fetchQuestions() {
       try {
-        const res = await fetch("http://localhost:8000/api/questions/");
+        const res = await fetch("https://namayeshakhsiat.xyz/api/questions/");
         const data = await res.json();
 
         const sectionOrder = {};
@@ -57,7 +63,7 @@ export default function QuizRunner() {
   }, []);
 
   useEffect(() => {
-    if (questions.length > 0) {
+    if (questions.length > 0 && typeof window !== 'undefined') {
       const saved = localStorage.getItem("quiz_progress");
       if (saved) {
         const savedProgress = JSON.parse(saved);
@@ -69,7 +75,9 @@ export default function QuizRunner() {
   }, [questions]);
 
   useEffect(() => {
-    localStorage.setItem("quiz_progress", JSON.stringify(progress));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("quiz_progress", JSON.stringify(progress));
+    }
   }, [progress]);
 
   useEffect(() => {
@@ -85,31 +93,32 @@ export default function QuizRunner() {
   }, [currentIndex, questions, progress]);
 
   const handleNext = () => {
-  const current = questions[currentIndex];
-  if (!current) return;
+    const current = questions[currentIndex];
+    if (!current) return;
 
-  const updated = {
-    ...progress,
-    [current.id]: {
-      question: current.text,
-      score,
-      description,
-      section: current.section_name
+    const updated = {
+      ...progress,
+      [current.id]: {
+        question: current.text,
+        score,
+        description,
+        section: current.section_name
+      }
+    };
+    setProgress(updated);
+
+    if (currentIndex + 1 < questions.length) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      submitAnswersToAPI(updated);
+      setSubmitted(true);
     }
   };
-  setProgress(updated);
-
-  if (currentIndex + 1 < questions.length) {
-    setCurrentIndex(currentIndex + 1);
-  } else {
-    submitAnswersToAPI(updated);
-    setSubmitted(true);
-  }
-};
-
 
   const handleRestart = () => {
-    localStorage.removeItem("quiz_progress");
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("quiz_progress");
+    }
     setProgress({});
     setScore(5);
     setDescription("");
@@ -118,44 +127,56 @@ export default function QuizRunner() {
   };
 
   const submitAnswersToAPI = async (finalProgress) => {
-  const telegramId = PLACEHOLDER_TELEGRAM_ID;
-  const payload = {
-    user: telegramId,  // اینجا از telegramId واقعی استفاده کن
-    first_name: "Ali",  // می‌تونی از این برای اسم استفاده کنی
-    answers: Object.entries(finalProgress).map(([questionId, answer]) => ({
-      question: parseInt(questionId),
-      score: answer.score,
-      description: answer.description
-    }))
+    const payload = {
+      user: telegramId,
+      first_name: firstName,
+      answers: Object.entries(finalProgress).map(([questionId, answer]) => ({
+        question: parseInt(questionId),
+        score: answer.score,
+        description: answer.description
+      }))
+    };
+
+    console.log("📤 داده ارسال‌شده به سرور:", JSON.stringify(payload, null, 2));
+    console.log("👤 User Info:", { id: telegramId, name: firstName, username });
+
+    try {
+      const res = await fetch("https://namayeshakhsiat.xyz/api/answer-submissions/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const text = await res.text();
+      console.log("🟡 وضعیت سرور:", res.status);
+      console.log("📝 پاسخ سرور:", text);
+
+      if (!res.ok) {
+        throw new Error(`ارسال به سرور ناموفق بود. وضعیت: ${res.status}`);
+      }
+
+      console.log("✅ پاسخ‌ها با موفقیت ارسال شدند");
+    } catch (err) {
+      console.error("❌ خطا در ارسال پاسخ‌ها:", err);
+    }
   };
 
-  console.log("📤 داده ارسال‌شده به سرور:", JSON.stringify(payload, null, 2));
-
-  try {
-    const res = await fetch("http://localhost:8000/api/answer-submissions/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const text = await res.text();
-    console.log("🟡 وضعیت سرور:", res.status);
-    console.log("📝 پاسخ سرور:", text);
-
-    if (!res.ok) {
-      throw new Error(`ارسال به سرور ناموفق بود. وضعیت: ${res.status}`);
-    }
-
-    console.log("✅ پاسخ‌ها با موفقیت ارسال شدند");
-  } catch (err) {
-    console.error("❌ خطا در ارسال پاسخ‌ها:", err);
-  }
-};
-
   if (!loaded || questions.length === 0) {
-    return <p className="text-center mt-8">در حال بارگذاری سوالات...</p>;
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">در حال بارگذاری سوالات...</p>
+          {userData && (
+            <p className="text-xs text-gray-500 mt-2">
+              کاربر: {firstName} ({telegramId})
+            </p>
+          )}
+        </div>
+      </div>
+    );
   }
 
   if (submitted) {
@@ -164,12 +185,15 @@ export default function QuizRunner() {
         <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-6 text-center space-y-4">
           <h2 className="text-xl font-bold text-green-700">✅ آزمون شما ثبت شد</h2>
           <p className="text-gray-700 text-sm leading-relaxed">
-            ممنون بابت شرکت در آزمون.
+            ممنون {firstName} بابت شرکت در آزمون.
             <br />
             🔑 کد پیگیری شما:
             <br />
-            <span className="font-mono text-lg text-purple-700">{PLACEHOLDER_TELEGRAM_ID}</span>
+            <span className="font-mono text-lg text-purple-700">{telegramId}</span>
           </p>
+          <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2">
+            نتایج تحلیل شده به زودی در اختیار شما قرار خواهد گرفت
+          </div>
           <button
             onClick={handleRestart}
             className="w-full mt-4 bg-purple-100 hover:bg-purple-200 text-purple-800 font-semibold py-2 rounded-xl text-sm"
@@ -191,6 +215,12 @@ export default function QuizRunner() {
   return (
     <div className={`min-h-screen w-screen flex items-center justify-center px-4 py-8 ${sectionColor}`}>
       <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-6 space-y-6">
+
+        {/* نمایش اطلاعات کاربر */}
+        <div className="text-center text-xs text-gray-500">
+          کاربر: {firstName} ({telegramId})
+        </div>
+
         <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
           <div
             className="h-full bg-purple-600 transition-all"

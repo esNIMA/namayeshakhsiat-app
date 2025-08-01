@@ -48,10 +48,16 @@ export default function WelcomeScreen({ onContinue }) {
   useEffect(() => {
     if (telegramUser && !loading) {
       setTimeout(() => {
-        onContinue();
+        onContinue(telegramUser); // User data رو پاس میکنیم
       }, 1000);
     }
   }, [telegramUser, loading, onContinue]);
+
+  const handleManualStart = () => {
+    if (telegramUser) {
+      onContinue(telegramUser);
+    }
+  };
 
   return (
     <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-white px-4 py-8">
@@ -107,7 +113,7 @@ export default function WelcomeScreen({ onContinue }) {
         {/* دکمه اضطراری برای شروع دستی */}
         {!loading && (
           <button
-            onClick={onContinue}
+            onClick={handleManualStart}
             className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-xl transition text-sm"
           >
             🚀 شروع آزمون
