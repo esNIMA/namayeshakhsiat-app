@@ -186,13 +186,9 @@ export default function QuizRunner({ userData }) {
           <h2 className="text-xl font-bold text-green-700">✅ آزمون شما ثبت شد</h2>
           <p className="text-gray-700 text-sm leading-relaxed">
             ممنون {firstName} بابت شرکت در آزمون.
-            <br />
-            🔑 کد پیگیری شما:
-            <br />
-            <span className="font-mono text-lg text-purple-700">{telegramId}</span>
           </p>
           <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2">
-            نتایج تحلیل شده به زودی در اختیار شما قرار خواهد گرفت
+            برای دریافت تحلیل نتایج، به آیدی @HB2848 مراجعه کنید. منتظرتونیم!
           </div>
           <button
             onClick={handleRestart}
