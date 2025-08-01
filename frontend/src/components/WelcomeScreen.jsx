@@ -26,24 +26,23 @@ export default function WelcomeScreen({ onContinue }) {
         setError("اطلاعات کاربر از تلگرام دریافت نشد");
       }
     } else {
-      // برای تست در development
-      console.warn("Telegram Web App API not available");
-      setTelegramUser({
-        id: 123456789,
-        first_name: "Test User",
-        username: "testuser"
-      });
+      // خطای واقعی - Telegram Web App API در دسترس نیست
+      setError("این اپلیکیشن فقط از طریق تلگرام قابل استفاده است");
+      console.error("Telegram Web App API not available");
     }
   }, []);
 
-  const handleCheckMembership = async () => {
+  // فانکشن یکپارچه برای بررسی عضویت
+  const checkMembership = async (showLoading = false) => {
     if (!telegramUser) {
       setError("اطلاعات کاربر موجود نیست");
-      return;
+      return false;
     }
 
-    setChecking(true);
-    setError("");
+    if (showLoading) {
+      setChecking(true);
+      setError("");
+    }
 
     try {
       const response = await axios.post("/verify-membership/", {
@@ -53,29 +52,36 @@ export default function WelcomeScreen({ onContinue }) {
         last_name: telegramUser.last_name || ''
       });
 
-      setChecking(false);
+      if (showLoading) setChecking(false);
 
       if (response.data.success && response.data.is_member) {
-        // نمایش پیغام موفقیت
-        setStep("verified");
-
-        // بعد از 2 ثانیه انتقال به آزمون
-        setTimeout(() => {
+        if (showLoading) {
+          // نمایش پیغام موفقیت و انتقال تدریجی
+          setStep("verified");
+          setTimeout(() => onContinue(), 2000);
+        } else {
+          // انتقال مستقیم (برای auto check)
           onContinue();
-        }, 2000);
+        }
+        return true;
       } else {
-        setError(response.data.error || "شما عضو کانال نیستید");
+        if (showLoading) {
+          setError(response.data.error || "شما عضو کانال نیستید");
+        } else {
+          // نمایش صفحه عضویت (برای auto check)
+          setStep("check-membership");
+        }
+        return false;
       }
     } catch (err) {
-      setChecking(false);
-
-      if (err.response?.data?.error) {
-        setError(err.response.data.error);
+      if (showLoading) {
+        setChecking(false);
+        setError(err.response?.data?.error || "خطا در اتصال به سرور");
       } else {
-        setError("خطا در اتصال به سرور");
+        setStep("check-membership");
       }
-
       console.error("Membership check error:", err);
+      return false;
     }
   };
 
@@ -84,34 +90,14 @@ export default function WelcomeScreen({ onContinue }) {
     if (telegramUser && step === "welcome") {
       // تاخیر کوتاه برای UX بهتر
       setTimeout(() => {
-        handleAutoCheck();
+        checkMembership(false); // بدون loading state
       }, 1000);
     }
   }, [telegramUser, step]);
 
-  const handleAutoCheck = async () => {
-    if (!telegramUser) return;
-
-    try {
-      const response = await axios.post("/verify-membership/", {
-        telegram_id: telegramUser.id,
-        username: telegramUser.username || '',
-        first_name: telegramUser.first_name || '',
-        last_name: telegramUser.last_name || ''
-      });
-
-      if (response.data.success && response.data.is_member) {
-        // کاربر قبلاً عضو است، مستقیماً انتقال
-        onContinue();
-      } else {
-        // کاربر عضو نیست، نمایش صفحه عضویت
-        setStep("check-membership");
-      }
-    } catch (err) {
-      // در صورت خطا، نمایش صفحه عضویت
-      setStep("check-membership");
-      console.error("Auto check error:", err);
-    }
+  // هندلر برای دکمه بررسی دستی
+  const handleManualCheck = () => {
+    checkMembership(true); // با loading state
   };
 
   return (
@@ -132,6 +118,11 @@ export default function WelcomeScreen({ onContinue }) {
               <p className="text-xs text-gray-500">
                 خوش آمدید {telegramUser.first_name}!
               </p>
+            )}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
             )}
           </>
         )}
@@ -156,7 +147,7 @@ export default function WelcomeScreen({ onContinue }) {
             </div>
 
             <button
-              onClick={handleCheckMembership}
+              onClick={handleManualCheck}
               disabled={checking}
               className={`w-full font-semibold py-3 px-4 rounded-xl transition text-sm ${
                 checking 
