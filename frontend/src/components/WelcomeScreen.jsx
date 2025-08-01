@@ -7,6 +7,7 @@ export default function WelcomeScreen({ onContinue }) {
   const [debugInfo, setDebugInfo] = useState("");
 
   useEffect(() => {
+    console.log("Window Telegram:", window.Telegram);
     // Clear all cache first
     if (typeof window !== 'undefined') {
       localStorage.clear();
