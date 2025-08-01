@@ -108,7 +108,7 @@ export default function WelcomeScreen({ onContinue }) {
           <summary className="cursor-pointer text-gray-600">🔍 Debug Info</summary>
           <pre className="text-left mt-2 text-gray-700">
 {JSON.stringify({
-  telegram_api_available: !!window.Telegram?.Web App,
+  telegram_api_available: !!window.Telegram?.WebApp,
   user_data: telegramUser,
   has_error: !!error,
   loading: loading
