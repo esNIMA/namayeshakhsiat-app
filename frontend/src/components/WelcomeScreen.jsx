@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 export default function WelcomeScreen({ onContinue }) {
   const [telegramUser, setTelegramUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   // دریافت اطلاعات کاربر از Telegram Web App
   useEffect(() => {
@@ -16,46 +17,44 @@ export default function WelcomeScreen({ onContinue }) {
 
       // دریافت اطلاعات کاربر
       const user = tg.initDataUnsafe?.user;
+
+      console.log('🔍 DEBUG: Full Telegram data:', tg.initDataUnsafe);
+      console.log('👤 DEBUG: User data:', user);
+
       if (user && user.id) {
         setTelegramUser(user);
-        console.log('Telegram User:', user);
+        console.log('✅ Telegram User loaded:', user);
       } else {
-        console.warn("User data not available, using fallback");
-        // Fallback برای development یا مشکلات API
-        setTelegramUser({
-          id: 136758283,
-          first_name: "¤|N.I.M.A|¤",
-          username: "sNIIMA"
-        });
+        console.error('❌ No user data from Telegram');
+        setError("اطلاعات کاربر از تلگرام دریافت نشد");
+        // نمایش debug info
+        alert(`Debug Info:\nTelegram API: ${!!window.Telegram?.WebApp}\nUser Data: ${JSON.stringify(user, null, 2)}\nFull Data: ${JSON.stringify(tg.initDataUnsafe, null, 2)}`);
       }
     } else {
-      console.warn("Telegram Web App API not available, using fallback");
-      // Fallback برای تست خارج از Telegram
-      setTelegramUser({
-        id: 136758283,
-        first_name: "¤|N.I.M.A|¤",
-        username: "sNIIMA"
-      });
+      console.error('❌ Telegram Web App API not available');
+      setError("این اپلیکیشن فقط از طریق تلگرام قابل استفاده است");
     }
 
-    // بعد از 2 ثانیه loading رو متوقف کن
+    // بعد از 3 ثانیه loading رو متوقف کن
     setTimeout(() => {
       setLoading(false);
-    }, 2000);
+    }, 3000);
   }, []);
 
   // اگه user آماده باشه، مستقیماً به تست برو
   useEffect(() => {
-    if (telegramUser && !loading) {
+    if (telegramUser && !loading && !error) {
       setTimeout(() => {
         onContinue(telegramUser); // User data رو پاس میکنیم
       }, 1000);
     }
-  }, [telegramUser, loading, onContinue]);
+  }, [telegramUser, loading, error, onContinue]);
 
   const handleManualStart = () => {
     if (telegramUser) {
       onContinue(telegramUser);
+    } else {
+      alert('هیچ اطلاعات کاربری موجود نیست');
     }
   };
 
@@ -70,53 +69,70 @@ export default function WelcomeScreen({ onContinue }) {
 
         <h1 className="text-2xl font-bold text-purple-800">👤 نمای شخصیت</h1>
 
-        {loading ? (
+        {/* نمایش Error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-red-600 text-sm">{error}</p>
+            <p className="text-red-500 text-xs mt-2">
+              لطفاً از طریق دکمه Web App در تلگرام وارد شوید
+            </p>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && !error ? (
           <>
             <p className="text-gray-600 text-sm">
-              در حال آماده‌سازی تست برای شما...
+              در حال دریافت اطلاعات کاربر از تلگرام...
             </p>
             <div className="w-full bg-purple-200 rounded-full h-2">
               <div className="bg-purple-600 h-2 rounded-full animate-pulse" style={{width: '70%'}}></div>
             </div>
           </>
-        ) : (
+        ) : !error && telegramUser ? (
           <>
             <p className="text-gray-600 text-sm">
               آماده‌سازی کامل شد! در حال انتقال...
             </p>
-            {telegramUser && (
-              <p className="text-xs text-gray-500">
-                خوش آمدید {telegramUser.first_name}! 🎉
-              </p>
-            )}
+            <p className="text-xs text-gray-500">
+              خوش آمدید {telegramUser.first_name}! 🎉
+            </p>
             <div className="w-full bg-green-200 rounded-full h-2">
               <div className="bg-green-600 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
             </div>
           </>
-        )}
+        ) : null}
 
-        {/* Debug Info برای development */}
-        {telegramUser && !loading && (
-          <details className="text-xs bg-gray-100 p-2 rounded">
-            <summary className="cursor-pointer text-gray-600">🔍 Debug Info</summary>
-            <pre className="text-left mt-2 text-gray-700">
+        {/* Debug Info - همیشه نمایش بده */}
+        <details className="text-xs bg-gray-100 p-2 rounded">
+          <summary className="cursor-pointer text-gray-600">🔍 Debug Info</summary>
+          <pre className="text-left mt-2 text-gray-700">
 {JSON.stringify({
-  id: telegramUser.id,
-  first_name: telegramUser.first_name,
-  username: telegramUser.username,
-  telegram_api: !!window.Telegram?.WebApp
+  telegram_api_available: !!window.Telegram?.Web App,
+  user_data: telegramUser,
+  has_error: !!error,
+  loading: loading
 }, null, 2)}
-            </pre>
-          </details>
-        )}
+          </pre>
+        </details>
 
-        {/* دکمه اضطراری برای شروع دستی */}
-        {!loading && (
+        {/* دکمه اضطراری فقط اگه User داریم */}
+        {!loading && telegramUser && (
           <button
             onClick={handleManualStart}
             className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-xl transition text-sm"
           >
             🚀 شروع آزمون
+          </button>
+        )}
+
+        {/* دکمه reload اگه مشکل داریم */}
+        {!loading && error && (
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-xl transition text-sm"
+          >
+            🔄 تلاش مجدد
           </button>
         )}
       </div>
