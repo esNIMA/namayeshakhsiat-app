@@ -7,48 +7,34 @@ export default function WelcomeScreen({ onContinue }) {
   const [error, setError] = useState("");
   const [telegramUser, setTelegramUser] = useState(null);
 
-  // دریافت اطلاعات کاربر از Telegram Web App
-  useEffect(() => {
-    if (window.Telegram?.WebApp) {
-      const tg = window.Telegram.WebApp;
-      tg.ready();
 
-      // تنظیم theme
-      tg.setHeaderColor('#7c3aed');
-      tg.setBackgroundColor('#f8fafc');
+useEffect(() => {
+  if (window.Telegram?.WebApp) {
+    const tg = window.Telegram.WebApp;
+    tg.ready();
 
-      // تلاش برای دریافت اطلاعات کاربر
-      const user = tg.initDataUnsafe?.user;
+    // Debug با Alert
+    alert(`Telegram API Available: ${!!window.Telegram?.WebApp}`);
 
-      if (user && user.id) {
-        setTelegramUser(user);
-        console.log('Telegram User:', user);
-      } else {
-        // تلاش دوباره بعد از 1 ثانیه
-        console.warn('User data not available on first try, retrying...');
+    const user = tg.initDataUnsafe?.user;
+    alert(`User Data: ${JSON.stringify(user, null, 2)}`);
 
-        setTimeout(() => {
-          const retryUser = tg.initDataUnsafe?.user;
-          if (retryUser && retryUser.id) {
-            setTelegramUser(retryUser);
-            console.log('Telegram User (retry):', retryUser);
-          } else {
-            // اگه هنوز کاربر نداریم، اطلاعات پایه بسازیم
-            console.warn('User data still not available, using fallback');
-            setTelegramUser({
-              id: Math.floor(Date.now() / 1000), // یک ID منحصر به فرد
-              first_name: "کاربر تلگرام",
-              username: ""
-            });
-          }
-        }, 1000);
-      }
+    if (user && user.id) {
+      setTelegramUser(user);
+      alert(`User Set: ${user.first_name} (${user.id})`);
     } else {
-      // اگه Telegram Web App در دسترس نیست
-      console.error("Telegram Web App API not available");
-      setError("این اپلیکیشن فقط از طریق تلگرام قابل استفاده است");
+      alert('User data is null or missing ID');
+      // موقتاً یک user فیک بسازیم
+      setTelegramUser({
+        id: 136758283,
+        first_name: "¤|N.I.M.A|¤",
+        username: ""
+      });
     }
-  }, []);
+  } else {
+    alert('Telegram Web App API not available');
+  }
+}, []);
 
   // فانکشن یکپارچه برای بررسی عضویت
   const checkMembership = async (showLoading = false) => {
