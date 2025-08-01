@@ -4,9 +4,15 @@ export default function WelcomeScreen({ onContinue }) {
   const [telegramUser, setTelegramUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [debugInfo, setDebugInfo] = useState("");
 
-  // دریافت اطلاعات کاربر از Telegram Web App
   useEffect(() => {
+    // Clear all cache first
+    if (typeof window !== 'undefined') {
+      localStorage.clear();
+      sessionStorage.clear();
+    }
+
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
       tg.ready();
@@ -15,126 +21,150 @@ export default function WelcomeScreen({ onContinue }) {
       tg.setHeaderColor('#7c3aed');
       tg.setBackgroundColor('#f8fafc');
 
-      // دریافت اطلاعات کاربر
-      const user = tg.initDataUnsafe?.user;
+      // Debug: نمایش همه اطلاعات
+      const fullDebug = {
+        timestamp: new Date().toISOString(),
+        telegram_available: !!window.Telegram?.WebApp,
+        webApp_version: tg.version || 'unknown',
+        platform: tg.platform || 'unknown',
+        initData: tg.initData || 'empty',
+        initDataUnsafe: tg.initDataUnsafe || {},
+        user_from_unsafe: tg.initDataUnsafe?.user || null,
+        query_id: tg.initDataUnsafe?.query_id || 'none',
+        auth_date: tg.initDataUnsafe?.auth_date || 'none'
+      };
 
-      console.log('🔍 DEBUG: Full Telegram data:', tg.initDataUnsafe);
-      console.log('👤 DEBUG: User data:', user);
+      setDebugInfo(JSON.stringify(fullDebug, null, 2));
+      console.log('🔍 FULL DEBUG INFO:', fullDebug);
 
-      if (user && user.id) {
-        setTelegramUser(user);
-        console.log('✅ Telegram User loaded:', user);
-      } else {
-        console.error('❌ No user data from Telegram');
-        setError("اطلاعات کاربر از تلگرام دریافت نشد");
-        // نمایش debug info
-        alert(`Debug Info:\nTelegram API: ${!!window.Telegram?.WebApp}\nUser Data: ${JSON.stringify(user, null, 2)}\nFull Data: ${JSON.stringify(tg.initDataUnsafe, null, 2)}`);
-      }
+      // کمی صبر کنیم تا data کاملاً load بشه
+      setTimeout(() => {
+        const user = tg.initDataUnsafe?.user;
+        console.log('👤 USER DATA AFTER TIMEOUT:', user);
+
+        if (user && user.id) {
+          setTelegramUser(user);
+          console.log('✅ User set:', user);
+        } else {
+          console.error('❌ No valid user data');
+          setError(`No user data. Full debug: ${JSON.stringify(fullDebug, null, 2)}`);
+        }
+
+        setLoading(false);
+      }, 1000);
+
     } else {
-      console.error('❌ Telegram Web App API not available');
-      setError("این اپلیکیشن فقط از طریق تلگرام قابل استفاده است");
-    }
+      const debugInfo = {
+        timestamp: new Date().toISOString(),
+        error: 'Telegram Web App API not available',
+        window_telegram: !!window.Telegram,
+        user_agent: navigator.userAgent
+      };
 
-    // بعد از 3 ثانیه loading رو متوقف کن
-    setTimeout(() => {
+      setDebugInfo(JSON.stringify(debugInfo, null, 2));
+      setError("این اپ فقط در تلگرام کار می‌کند");
       setLoading(false);
-    }, 3000);
+    }
   }, []);
 
-  // اگه user آماده باشه، مستقیماً به تست برو
-  useEffect(() => {
-    if (telegramUser && !loading && !error) {
-      setTimeout(() => {
-        onContinue(telegramUser); // User data رو پاس میکنیم
-      }, 1000);
-    }
-  }, [telegramUser, loading, error, onContinue]);
-
-  const handleManualStart = () => {
+  const handleContinue = () => {
     if (telegramUser) {
+      console.log('🚀 Continuing with user:', telegramUser);
       onContinue(telegramUser);
     } else {
-      alert('هیچ اطلاعات کاربری موجود نیست');
+      alert('هیچ اطلاعات کاربری موجود نیست!');
+    }
+  };
+
+  const copyDebugInfo = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(debugInfo);
+      alert('Debug info copied to clipboard!');
+    } else {
+      // Fallback
+      const textarea = document.createElement('textarea');
+      textarea.value = debugInfo;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      alert('Debug info copied!');
     }
   };
 
   return (
     <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-purple-100 to-white px-4 py-8">
-      <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-6 text-center space-y-6">
+      <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-6 text-center space-y-4">
 
-        {/* صفحه لودینگ */}
-        <div className="animate-pulse">
-          <div className="w-16 h-16 bg-purple-200 rounded-full mx-auto mb-4"></div>
+        <h1 className="text-xl font-bold text-purple-800">🔍 Debug Mode</h1>
+
+        {/* نمایش وضعیت */}
+        <div className="text-sm space-y-2">
+          <div className={`p-2 rounded ${loading ? 'bg-yellow-100' : telegramUser ? 'bg-green-100' : 'bg-red-100'}`}>
+            <strong>Status:</strong> {loading ? 'Loading...' : telegramUser ? 'User Loaded' : 'Error'}
+          </div>
+
+          {telegramUser && (
+            <div className="bg-blue-100 p-2 rounded">
+              <strong>User:</strong> {telegramUser.first_name} (ID: {telegramUser.id})
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-100 p-2 rounded text-red-700 text-xs">
+              <strong>Error:</strong> {error}
+            </div>
+          )}
         </div>
 
-        <h1 className="text-2xl font-bold text-purple-800">👤 نمای شخصیت</h1>
-
-        {/* نمایش Error */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-red-600 text-sm">{error}</p>
-            <p className="text-red-500 text-xs mt-2">
-              لطفاً از طریق دکمه Web App در تلگرام وارد شوید
-            </p>
-          </div>
-        )}
-
-        {/* Loading State */}
-        {loading && !error ? (
-          <>
-            <p className="text-gray-600 text-sm">
-              در حال دریافت اطلاعات کاربر از تلگرام...
-            </p>
-            <div className="w-full bg-purple-200 rounded-full h-2">
-              <div className="bg-purple-600 h-2 rounded-full animate-pulse" style={{width: '70%'}}></div>
-            </div>
-          </>
-        ) : !error && telegramUser ? (
-          <>
-            <p className="text-gray-600 text-sm">
-              آماده‌سازی کامل شد! در حال انتقال...
-            </p>
-            <p className="text-xs text-gray-500">
-              خوش آمدید {telegramUser.first_name}! 🎉
-            </p>
-            <div className="w-full bg-green-200 rounded-full h-2">
-              <div className="bg-green-600 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
-            </div>
-          </>
-        ) : null}
-
-        {/* Debug Info - همیشه نمایش بده */}
-        <details className="text-xs bg-gray-100 p-2 rounded">
-          <summary className="cursor-pointer text-gray-600">🔍 Debug Info</summary>
-          <pre className="text-left mt-2 text-gray-700">
-{JSON.stringify({
-  telegram_api_available: !!window.Telegram?.Web App,
-  user_data: telegramUser,
-  has_error: !!error,
-  loading: loading
-}, null, 2)}
+        {/* Debug Info */}
+        <details className="text-xs bg-gray-100 p-3 rounded">
+          <summary className="cursor-pointer font-semibold mb-2">📋 Full Debug Info</summary>
+          <pre className="text-left overflow-auto max-h-60 bg-white p-2 rounded border">
+            {debugInfo}
           </pre>
+          <button
+            onClick={copyDebugInfo}
+            className="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-xs"
+          >
+            📋 Copy Debug Info
+          </button>
         </details>
 
-        {/* دکمه اضطراری فقط اگه User داریم */}
-        {!loading && telegramUser && (
-          <button
-            onClick={handleManualStart}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-xl transition text-sm"
-          >
-            🚀 شروع آزمون
-          </button>
-        )}
+        {/* دکمه‌ها */}
+        <div className="space-y-2">
+          {telegramUser && (
+            <button
+              onClick={handleContinue}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-xl transition text-sm"
+            >
+              ✅ Continue with {telegramUser.first_name}
+            </button>
+          )}
 
-        {/* دکمه reload اگه مشکل داریم */}
-        {!loading && error && (
           <button
             onClick={() => window.location.reload()}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl transition text-sm"
+          >
+            🔄 Reload Page
+          </button>
+
+          <button
+            onClick={() => {
+              localStorage.clear();
+              sessionStorage.clear();
+              window.location.reload();
+            }}
             className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-xl transition text-sm"
           >
-            🔄 تلاش مجدد
+            🗑️ Clear All Cache & Reload
           </button>
-        )}
+        </div>
+
+        {/* Real-time info */}
+        <div className="text-xs text-gray-500">
+          Timestamp: {new Date().toLocaleString()}
+        </div>
       </div>
     </div>
   );
