@@ -110,6 +110,19 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+# CSRF Settings
+CSRF_TRUSTED_ORIGINS = [
+    'https://namayeshakhsiat.xyz',
+    'https://www.namayeshakhsiat.xyz',
+    'http://localhost:3000',  # برای frontend
+]
+
+# اگه reverse proxy استفاده می‌کنید
+USE_TZ = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Debug mode
+DEBUG = True  # موقتاً True کنید
 
 # Internationalization
 LANGUAGE_CODE = "fa-ir"
