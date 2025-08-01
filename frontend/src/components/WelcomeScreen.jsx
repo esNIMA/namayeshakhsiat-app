@@ -17,18 +17,36 @@ export default function WelcomeScreen({ onContinue }) {
       tg.setHeaderColor('#7c3aed');
       tg.setBackgroundColor('#f8fafc');
 
-      // دریافت اطلاعات کاربر
+      // تلاش برای دریافت اطلاعات کاربر
       const user = tg.initDataUnsafe?.user;
-      if (user) {
+
+      if (user && user.id) {
         setTelegramUser(user);
         console.log('Telegram User:', user);
       } else {
-        setError("اطلاعات کاربر از تلگرام دریافت نشد");
+        // تلاش دوباره بعد از 1 ثانیه
+        console.warn('User data not available on first try, retrying...');
+
+        setTimeout(() => {
+          const retryUser = tg.initDataUnsafe?.user;
+          if (retryUser && retryUser.id) {
+            setTelegramUser(retryUser);
+            console.log('Telegram User (retry):', retryUser);
+          } else {
+            // اگه هنوز کاربر نداریم، اطلاعات پایه بسازیم
+            console.warn('User data still not available, using fallback');
+            setTelegramUser({
+              id: Math.floor(Date.now() / 1000), // یک ID منحصر به فرد
+              first_name: "کاربر تلگرام",
+              username: ""
+            });
+          }
+        }, 1000);
       }
     } else {
-      // خطای واقعی - Telegram Web App API در دسترس نیست
-      setError("این اپلیکیشن فقط از طریق تلگرام قابل استفاده است");
+      // اگه Telegram Web App در دسترس نیست
       console.error("Telegram Web App API not available");
+      setError("این اپلیکیشن فقط از طریق تلگرام قابل استفاده است");
     }
   }, []);
 
@@ -45,6 +63,8 @@ export default function WelcomeScreen({ onContinue }) {
     }
 
     try {
+      console.log('Checking membership for user:', telegramUser.id);
+
       const response = await axios.post("/verify-membership/", {
         telegram_id: telegramUser.id,
         username: telegramUser.username || '',
@@ -53,6 +73,8 @@ export default function WelcomeScreen({ onContinue }) {
       });
 
       if (showLoading) setChecking(false);
+
+      console.log('Membership check response:', response.data);
 
       if (response.data.success && response.data.is_member) {
         if (showLoading) {
@@ -74,13 +96,14 @@ export default function WelcomeScreen({ onContinue }) {
         return false;
       }
     } catch (err) {
+      console.error("Membership check error:", err);
+
       if (showLoading) {
         setChecking(false);
         setError(err.response?.data?.error || "خطا در اتصال به سرور");
       } else {
         setStep("check-membership");
       }
-      console.error("Membership check error:", err);
       return false;
     }
   };
@@ -88,15 +111,17 @@ export default function WelcomeScreen({ onContinue }) {
   // بررسی خودکار عضویت در ابتدا
   useEffect(() => {
     if (telegramUser && step === "welcome") {
+      console.log('Starting auto membership check for:', telegramUser.first_name);
       // تاخیر کوتاه برای UX بهتر
       setTimeout(() => {
         checkMembership(false); // بدون loading state
-      }, 1000);
+      }, 1500);
     }
   }, [telegramUser, step]);
 
   // هندلر برای دکمه بررسی دستی
   const handleManualCheck = () => {
+    console.log('Manual membership check triggered');
     checkMembership(true); // با loading state
   };
 
@@ -123,6 +148,21 @@ export default function WelcomeScreen({ onContinue }) {
               <div className="bg-red-50 border border-red-200 rounded-xl p-3">
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
+            )}
+
+            {/* Debug Panel - نمایش اطلاعات برای تست */}
+            {telegramUser && (
+              <details className="text-xs bg-gray-100 p-2 rounded">
+                <summary className="cursor-pointer text-gray-600">🔍 Debug Info</summary>
+                <pre className="text-left mt-2 text-gray-700">
+{JSON.stringify({
+  id: telegramUser.id,
+  first_name: telegramUser.first_name,
+  username: telegramUser.username,
+  telegram_available: !!window.Telegram?.WebApp
+}, null, 2)}
+                </pre>
+              </details>
             )}
           </>
         )}
