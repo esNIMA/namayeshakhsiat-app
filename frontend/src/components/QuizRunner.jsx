@@ -5,43 +5,10 @@ const SECTION_COLORS = [
   "bg-cyan-50", "bg-sky-50", "bg-indigo-50", "bg-fuchsia-50", "bg-pink-50"
 ];
 
-// Safe localStorage helper
-const getFromStorage = (key, defaultValue = {}) => {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const saved = localStorage.getItem(key);
-      return saved ? JSON.parse(saved) : defaultValue;
-    }
-  } catch (error) {
-    console.warn('localStorage error:', error);
-  }
-  return defaultValue;
-};
-
-const setToStorage = (key, value) => {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem(key, JSON.stringify(value));
-    }
-  } catch (error) {
-    console.warn('localStorage error:', error);
-  }
-};
-
-const removeFromStorage = (key) => {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.removeItem(key);
-    }
-  } catch (error) {
-    console.warn('localStorage error:', error);
-  }
-};
-
 export default function QuizRunner({ userData }) {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [progress, setProgress] = useState({});
+  const [progress, setProgress] = useState({}); // فقط in-memory
   const [score, setScore] = useState(5);
   const [description, setDescription] = useState("");
   const [loaded, setLoaded] = useState(false);
@@ -51,12 +18,6 @@ export default function QuizRunner({ userData }) {
   const telegramId = userData?.id || 136758283;
   const firstName = userData?.first_name || "کاربر";
   const username = userData?.username || "";
-
-  // Load progress from localStorage on mount
-  useEffect(() => {
-    const savedProgress = getFromStorage("quiz_progress", {});
-    setProgress(savedProgress);
-  }, []);
 
   useEffect(() => {
     async function fetchQuestions() {
@@ -96,18 +57,6 @@ export default function QuizRunner({ userData }) {
   }, []);
 
   useEffect(() => {
-    if (questions.length > 0) {
-      const answeredIds = Object.keys(progress).map(id => parseInt(id));
-      const nextIndex = questions.findIndex(q => !answeredIds.includes(q.id));
-      setCurrentIndex(nextIndex === -1 ? questions.length : nextIndex);
-    }
-  }, [questions, progress]);
-
-  useEffect(() => {
-    setToStorage("quiz_progress", progress);
-  }, [progress]);
-
-  useEffect(() => {
     const currentQuestion = questions[currentIndex];
     if (currentQuestion && progress[currentQuestion.id]) {
       const prev = progress[currentQuestion.id];
@@ -143,7 +92,6 @@ export default function QuizRunner({ userData }) {
   };
 
   const handleRestart = () => {
-    removeFromStorage("quiz_progress");
     setProgress({});
     setScore(5);
     setDescription("");
