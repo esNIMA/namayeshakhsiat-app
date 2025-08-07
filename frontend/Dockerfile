@@ -1,19 +1,19 @@
 # Frontend Dockerfile - Production build
-FROM node:18-alpine as builder
-
+FROM node:20-alpine as builder
 WORKDIR /app
 
 # کپی package files
 COPY package*.json ./
-RUN npm ci --only=production
+
+# نصب همه dependencies (هم dev هم production)
+RUN npm ci
 
 # کپی کد و build
 COPY . .
 RUN npm run build
 
 # Production serve
-FROM node:18-alpine
-
+FROM node:20-alpine
 WORKDIR /app
 
 # نصب serve برای static files

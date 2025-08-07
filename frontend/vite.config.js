@@ -3,15 +3,12 @@ import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite'
-import fs from 'fs';
 
 export default defineConfig({
   base: '/',
-
   plugins: [
     react(),
     tailwindcss(),
-
   ],
   publicDir: './public',
   server: {
@@ -22,10 +19,11 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
-    https: {
-      key: fs.readFileSync('./certs/localhost-key.pem'),
-      cert: fs.readFileSync('./certs/localhost.pem'),
-    },
+    // HTTPS config برای dev - در build نیاز نیست
+    // https: {
+    //   key: fs.readFileSync('./certs/localhost-key.pem'),
+    //   cert: fs.readFileSync('./certs/localhost.pem'),
+    // },
     host: true,
   },
   resolve: {
