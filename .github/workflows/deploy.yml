@@ -2,13 +2,13 @@ name: Deploy to VPS
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, telegram-integration ]  # اضافه کردن branch جدید
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Deploy to VPS via SSH
       uses: appleboy/ssh-action@v1.0.0
@@ -21,8 +21,11 @@ jobs:
           # Navigate to project directory
           cd /var/www/namayeshakhsiat
           
-          # Pull latest changes
-          git pull origin main
+          # Get current branch
+          CURRENT_BRANCH=$(git branch --show-current)
+          
+          # Pull latest changes from current branch
+          git pull origin $CURRENT_BRANCH
           
           # Stop current containers
           docker-compose down
@@ -35,3 +38,4 @@ jobs:
           
           # Show logs for debugging
           docker-compose logs --tail=20 backend
+          docker-compose logs --tail=20 frontend
