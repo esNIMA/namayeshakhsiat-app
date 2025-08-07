@@ -5,7 +5,13 @@ WORKDIR /app
 
 # کپی package files
 COPY package*.json ./
-RUN npm ci --only=production
+
+# نصب همه dependencies (dev هم لازمه برای build)
+RUN npm ci
+
+# تنظیم environment variables برای build
+ARG REACT_APP_API_URL=https://namayeshakhsiat.xyz/api
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 # کپی کد و build
 COPY . .
@@ -24,5 +30,5 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 3000
 
-# اجرای static server
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# اجرای static server با تنظیمات SPA
+CMD ["serve", "-s", "dist", "-l", "3000", "--single"]
